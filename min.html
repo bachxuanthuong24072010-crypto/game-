@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Dò Mìn (Minesweeper)</title>
+    <style>
+        /* --- CSS (Định kiểu) --- */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding-top: 20px;
+        }
+
+        #controls {
+            margin-bottom: 20px;
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+
+        #controls button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: 1px solid #000;
+            border-radius: 4px;
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        
+        #minesweeper {
+            display: grid;
+            border: 3px solid #777;
+            background-color: #ccc;
+        }
+        
+        /* --- CSS cho nút Menu mới --- */
+        .menu-button {
+            position: absolute; /* Định vị tuyệt đối */
+            top: 10px;
+            left: 10px;
+            padding: 8px 15px;
+            background-color: #f44336; /* Màu đỏ */
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 1000; /* Đảm bảo nút nằm trên cùng */
+        }
+        .menu-button:hover {
+            background-color: #d32f2f;
+        }
+
+        /* Phần còn lại của CSS Dò Mìn */
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #999;
+            box-sizing: border-box;
+            background-color: #c0c0c0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 1px 1px 2px #000 inset, -1px -1px 2px #fff inset;
+        }
+
+        .cell.clicked {
+            background-color: #ddd;
+            box-shadow: none;
+        }
+
+        .cell.mine {
+            background-color: red;
+            color: black;
+            font-size: 20px;
+        }
+
+        .cell.flag {
+            color: red;
+            font-size: 20px;
+        }
+
+        .count-1 { color: blue; }
+        .count-2 { color: green; }
+        .count-3 { color: red; }
+        .count-4 { color: darkblue; }
+        .count-5 { color: darkred; }
+        .count-6 { color: teal; }
+        .count-7 { color: black; }
+        .count-8 { color: gray; }
+        
+        #message {
+            margin-top: 15px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <a href="h.html" class="menu-button">← Menu</a>
+    
+    <div id="controls">
+        <h2>🚩 Dò Mìn</h2>
+        <p id="mine-count">Số mìn còn lại: --</p>
+        
+        <button onclick="startGame(9, 9, 10)">Dễ (9x9, 10 Mìn)</button>
+        <button onclick="startGame(16, 16, 40)">Trung Bình (16x16, 40 Mìn)</button>
+        <button onclick="startGame(16, 30, 99)">Khó (16x30, 99 Mìn)</button>
+    </div>
+    
+    <div id="minesweeper">
+        </div>
+
+    <div id="message"></div>
+
+    <script>
+        const gameBoard = document.getElementById('minesweeper');
+        const messageDisplay = document.getElementById('message');
+        const mineCountDisplay = document.getElementById('mine-count');
+        
+        let ROWS = 0;
+        let COLS = 0;
+        let MINES = 0;
+        let board = [];
+        let cellsLeft = 0;
+        let flagsPlaced = 0;
+        let gameOver = false;
+
+        function startGame(rows, cols, mines) {
+            ROWS = rows;
+            COLS = cols;
+            MINES = mines;
+
+            gameOver = false;
+            flagsPlaced = 0;
+            cellsLeft = ROWS * COLS - MINES;
+            messageDisplay.textContent = 'Bắt đầu chơi!';
+
+            gameBoard.innerHTML = '';
+            gameBoard.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+
+            initializeBoard();
+            placeMines();
+            calculateNeighborMines();
+            renderBoard();
+
+            updateMineCount();
+        }
+
+        function initializeBoard() {
+            board = [];
+            for (let r = 0; r < ROWS; r++) {
+                board[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    board[r][c] = {
+                        isMine: false,
+                        isOpen: false,
+                        isFlag: false,
+                        neighborMines: 0,
+                        element: null 
+                    };
+                }
+            }
+        }
+
+        function placeMines() {
+            let minesToPlace = MINES;
+            while (minesToPlace > 0) {
+                const r = Math.floor(Math.random() * ROWS);
+                const c = Math.floor(Math.random() * COLS);
+
+                if (!board[r][c].isMine) {
+                    board[r][c].isMine = true;
+                    minesToPlace--;
+                }
+            }
+        }
+
+        function calculateNeighborMines() {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (!board[r][c].isMine) {
+                        let count = 0;
+                        for (let dr = -1; dr <= 1; dr++) {
+                            for (let dc = -1; dc <= 1; dc++) {
+                                if (dr === 0 && dc === 0) continue; 
+
+                                const nr = r + dr;
+                                const nc = c + dc;
+
+                                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                                    if (board[nr][nc].isMine) {
+                                        count++;
+                                    }
+                                }
+                            }
+                        }
+                        board[r][c].neighborMines = count;
+                    }
+                }
+            }
+        }
+
+        function renderBoard() {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cellData = board[r][c];
+                    const cellElement = document.createElement('div');
+                    cellElement.className = 'cell';
+                    cellElement.dataset.row = r;
+                    cellElement.dataset.col = c;
+
+                    cellElement.addEventListener('click', () => handleCellClick(r, c));
+
+                    cellElement.addEventListener('contextmenu', (e) => {
+                        e.preventDefault(); 
+                        handleFlag(r, c);
+                    });
+
+                    cellData.element = cellElement;
+                    gameBoard.appendChild(cellElement);
+                }
+            }
+        }
+        
+        function updateMineCount() {
+            mineCountDisplay.textContent = `Số mìn còn lại: ${MINES - flagsPlaced}`;
+        }
+
+        function handleCellClick(r, c) {
+            if (gameOver || board[r][c].isOpen || board[r][c].isFlag) {
+                return;
+            }
+
+            const cell = board[r][c];
+
+            if (cell.isMine) {
+                cell.element.classList.add('mine');
+                cell.element.textContent = '💣';
+                revealAllMines(r, c);
+                messageDisplay.textContent = 'GAME OVER! Bạn đã dẫm phải mìn.';
+                gameOver = true;
+                return;
+            }
+
+            openCell(r, c);
+
+            if (cellsLeft === 0) {
+                messageDisplay.textContent = '🎉 CHÚC MỪNG! Bạn đã chiến thắng!';
+                gameOver = true;
+                board.forEach(row => row.forEach(cell => {
+                    if (cell.isMine && !cell.isFlag) {
+                        cell.element.classList.add('flag');
+                        cell.element.textContent = '🚩';
+                    }
+                }));
+            }
+        }
+        
+        function openCell(r, c) {
+            if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c].isOpen || board[r][c].isMine) {
+                return;
+            }
+            
+            const cell = board[r][c];
+            if (cell.isFlag) return;
+            
+            cell.isOpen = true;
+            cell.element.classList.add('clicked');
+            cellsLeft--;
+
+            if (cell.neighborMines > 0) {
+                cell.element.textContent = cell.neighborMines;
+                cell.element.classList.add(`count-${cell.neighborMines}`);
+                return;
+            }
+
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    openCell(r + dr, c + dc);
+                }
+            }
+        }
+
+
+        function handleFlag(r, c) {
+            if (gameOver || board[r][c].isOpen) {
+                return;
+            }
+            
+            const cell = board[r][c];
+
+            if (cell.isFlag) {
+                cell.isFlag = false;
+                cell.element.classList.remove('flag');
+                cell.element.textContent = '';
+                flagsPlaced--;
+            } else if (flagsPlaced < MINES) {
+                cell.isFlag = true;
+                cell.element.classList.add('flag');
+                cell.element.textContent = '🚩';
+                flagsPlaced++;
+            }
+            
+            updateMineCount();
+        }
+
+        function revealAllMines(hitR, hitC) {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = board[r][c];
+                    if (cell.isMine) {
+                        cell.element.classList.add('mine');
+                        cell.element.textContent = '💣';
+                        if (r === hitR && c === hitC) {
+                             cell.element.style.backgroundColor = 'darkred'; 
+                        }
+                    } else if (cell.isFlag && !cell.isMine) {
+                        cell.element.textContent = '❌'; 
+                        cell.element.style.color = 'black';
+                    }
+                }
+            }
+        }
+
+        startGame(9, 9, 10);
+    </script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rắn Săn Mồi (Snake Game)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding-top: 20px;
+            margin: 0;
+            position: relative;
+        }
+
+        #game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        canvas {
+            border: 10px solid #333;
+            background-color: #c0f0c0; /* Màu nền sân chơi */
+            display: block; /* Quan trọng để canvas không bị giãn */
+        }
+
+        #score-board {
+            margin-bottom: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .menu-button {
+            position: absolute; 
+            top: 10px;
+            left: 10px;
+            padding: 8px 15px;
+            background-color: #f44336;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+        .menu-button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <a href="h.html" class="menu-button">← Menu</a>
+    
+    <div id="game-area">
+        <h1>Rắn Săn Mồi</h1>
+        <div id="score-board">Điểm: 0</div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreBoard = document.getElementById('score-board');
+
+        const TILE_SIZE = 20; 
+        const GRID_SIZE = canvas.width / TILE_SIZE; 
+        let gameLoopTimeout; // Đổi tên biến thành Timeout
+        let score = 0;
+        let isGameOver = false; // Biến trạng thái mới
+
+        let snake = [{ x: 10, y: 10 }]; 
+        let dx = 1; 
+        let dy = 0; 
+        let changingDirection = false; 
+
+        let food = {};
+
+        function randomFoodLocation() {
+            food.x = Math.floor(Math.random() * GRID_SIZE);
+            food.y = Math.floor(Math.random() * GRID_SIZE);
+
+            snake.forEach(segment => {
+                if (segment.x === food.x && segment.y === food.y) {
+                    randomFoodLocation();
+                }
+            });
+        }
+
+        function drawTile(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.strokeStyle = '#333';
+            ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+
+        function drawSnake() {
+            snake.forEach((segment, index) => {
+                const color = index === 0 ? '#007000' : '#4CAF50'; 
+                drawTile(segment.x, segment.y, color);
+            });
+        }
+
+        function drawFood() {
+            drawTile(food.x, food.y, '#FF0000');
+        }
+
+        function advanceSnake() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            
+            snake.unshift(head);
+            
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreBoard.textContent = `Điểm: ${score}`;
+                randomFoodLocation();
+            } else {
+                snake.pop();
+            }
+            
+            changingDirection = false;
+        }
+
+        function checkCollision() {
+            const head = snake[0];
+            
+            // Va chạm với chính mình
+            for (let i = 4; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) return true;
+            }
+            
+            // Va chạm với tường
+            const hitWall = head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE;
+
+            return hitWall;
+        }
+
+        function drawGameOver() {
+            // Hiển thị lớp phủ đen mờ
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Văn bản
+            ctx.fillStyle = 'white';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+            
+            ctx.font = '20px Arial';
+            ctx.fillText(`Điểm của bạn: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+            ctx.fillText('Nhấp chuột/Nhấn phím để chơi lại', canvas.width / 2, canvas.height / 2 + 60);
+        }
+
+        function gameLoop() {
+            if (isGameOver) {
+                // Nếu game over, dừng vòng lặp và hiển thị thông báo
+                clearTimeout(gameLoopTimeout);
+                drawGameOver();
+                return;
+            }
+            
+            if (checkCollision()) {
+                isGameOver = true;
+                gameLoop(); // Chạy lại để hiển thị Game Over
+                return;
+            }
+
+            // Xóa canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawFood();
+            advanceSnake();
+            drawSnake();
+
+            gameLoopTimeout = setTimeout(gameLoop, 150);
+        }
+
+        function changeDirection(event) {
+            // Cho phép reset game bằng phím bất kỳ (khi Game Over)
+            if (isGameOver) {
+                event.preventDefault(); // Ngăn chặn các phím mũi tên cuộn trang
+                startGame();
+                return;
+            }
+            
+            // Ngăn cuộn trang khi dùng phím mũi tên
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                event.preventDefault();
+            }
+            
+            if (changingDirection) return;
+            changingDirection = true;
+
+            const keyPressed = event.key;
+            
+            const LEFT = 'ArrowLeft';
+            const UP = 'ArrowUp';
+            const RIGHT = 'ArrowRight';
+            const DOWN = 'ArrowDown';
+
+            const goingUp = dy === -1;
+            const goingDown = dy === 1;
+            const goingRight = dx === 1;
+            const goingLeft = dx === -1;
+
+            if (keyPressed === LEFT && !goingRight) {
+                dx = -1;
+                dy = 0;
+            } else if (keyPressed === UP && !goingDown) {
+                dx = 0;
+                dy = -1;
+            } else if (keyPressed === RIGHT && !goingLeft) {
+                dx = 1;
+                dy = 0;
+            } else if (keyPressed === DOWN && !goingUp) {
+                dx = 0;
+                dy = 1;
+            }
+        }
+
+        function handleRestartClick(event) {
+            if (isGameOver) {
+                startGame();
+            }
+        }
+
+        function startGame() {
+            // Reset game state
+            snake = [{ x: 10, y: 10 }];
+            dx = 1; 
+            dy = 0;
+            score = 0;
+            isGameOver = false; // Đặt lại trạng thái
+            scoreBoard.textContent = `Điểm: 0`;
+            changingDirection = false;
+            
+            // Bắt đầu game
+            randomFoodLocation();
+            if (gameLoopTimeout) clearTimeout(gameLoopTimeout); 
+            gameLoop();
+        }
+
+        // Lắng nghe sự kiện phím để điều khiển rắn và reset game
+        document.addEventListener('keydown', changeDirection);
+        // Lắng nghe sự kiện click chuột để reset game
+        canvas.addEventListener('click', handleRestartClick);
+        
+        // Bắt đầu trò chơi lần đầu
+        startGame();
+
+    </script>
+</body>
+</html>

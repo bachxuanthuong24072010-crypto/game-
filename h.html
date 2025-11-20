@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chọn Game của bạn</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #282c34; 
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .game-selection-container {
+            background-color: #3a3f4a; 
+            padding: 40px 60px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #61dafb; 
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .game-button {
+            display: block; 
+            width: 80%; 
+            margin: 20px auto; 
+            padding: 15px 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            text-decoration: none; 
+        }
+
+        .game-button:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Màu riêng cho Flappy Bird */
+        .game-button.flappy-bird {
+            background-color: #ff9800; 
+        }
+        .game-button.flappy-bird:hover {
+            background-color: #e68a00;
+        }
+
+        /* Màu riêng cho Dò Mìn */
+        .game-button.minesweeper {
+            background-color: #4CAF50; 
+        }
+        .game-button.minesweeper:hover {
+            background-color: #45a049;
+        }
+
+        /* Màu riêng cho Rắn Săn Mồi (MỚI) */
+        .game-button.snake-game {
+            background-color: #3f51b5; /* Màu xanh tím */
+        }
+        .game-button.snake-game:hover {
+            background-color: #303f9f;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-selection-container">
+        <h1>Chọn game của bạn</h1>
+        <a href="flap.html" class="game-button flappy-bird">Chơi Flappy Bird</a> 
+        <a href="min.html" class="game-button minesweeper">Chơi Dò Mìn</a>
+        <a href="ran.html" class="game-button snake-game">Chơi Rắn Săn Mồi</a> </div>
+</body>
+</html>

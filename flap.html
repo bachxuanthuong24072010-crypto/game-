@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Clone</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            flex-direction: column;
+            cursor: pointer; 
+            position: relative;
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: skyblue;
+            display: block;
+        }
+        #score-display {
+            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        #high-score-display {
+            margin-top: 5px;
+            font-size: 18px;
+            color: #555;
+            font-style: italic;
+        }
+
+        .menu-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 8px 15px;
+            background-color: #f44336;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+        .menu-button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <a href="h.html" class="menu-button">← Menu</a>
+
+    <div id="score-display">Điểm: 0</div>
+    <div id="high-score-display">Kỷ lục: 0</div> 
+
+    <canvas id="gameCanvas" width="320" height="480"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const highScoreDisplay = document.getElementById('high-score-display');
+        
+        let frames = 0;
+        let score = 0;
+        let isGameOver = false;
+        let highScore = 0;
+
+        const BIRD_COLOR = 'yellow';
+        const PIPE_COLOR = 'green';
+        const GROUND_COLOR = 'brown';
+
+        const bird = {
+            x: 50,
+            y: 150,
+            width: 30,
+            height: 30,
+            gravity: 0.1,  
+            jump: 2.8,     
+            velocity: 0
+        };
+
+        const pipeProps = {
+            width: 50,
+            gap: 130, 
+            speed: 2
+        };
+
+        let pipes = [];
+        
+        // --- CHỨC NĂNG KỶ LỤC ---
+        
+        // HÀM MỚI: Chỉ cập nhật hiển thị kỷ lục (không liên quan đến điểm hiện tại)
+        function updateHighScoreDisplay() {
+            highScoreDisplay.textContent = `Kỷ lục: ${highScore}`;
+        }
+        
+        function loadHighScore() {
+            const savedScore = localStorage.getItem('flappyBirdHighScore');
+            highScore = savedScore ? parseInt(savedScore) : 0;
+            updateHighScoreDisplay(); // Chỉ cập nhật hiển thị kỷ lục
+        }
+
+        function saveHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('flappyBirdHighScore', highScore);
+                // Cập nhật ngay lập tức nếu là kỷ lục mới
+                highScoreDisplay.textContent = `Kỷ lục: ${highScore} (MỚI!)`;
+                return true;
+            }
+            return false;
+        }
+        // --- KẾT THÚC CHỨC NĂNG KỶ LỤC ---
+
+        function drawBird() {
+            ctx.fillStyle = BIRD_COLOR;
+            ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+            ctx.fillStyle = 'orange'; 
+            ctx.fillRect(bird.x + 25, bird.y + 5, 5, 5);
+        }
+
+        function drawPipes() {
+            for (let i = 0; i < pipes.length; i++) {
+                let p = pipes[i];
+                ctx.fillStyle = PIPE_COLOR;
+                ctx.fillRect(p.x, p.y, pipeProps.width, p.top);
+                ctx.fillRect(p.x, p.y + p.top + pipeProps.gap, pipeProps.width, canvas.height - (p.top + pipeProps.gap));
+            }
+        }
+
+        function drawGround() {
+            ctx.fillStyle = GROUND_COLOR;
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+        }
+
+        // HÀM CŨ: Chỉ cập nhật điểm hiện tại (không thay đổi)
+        function drawScore() {
+            scoreDisplay.textContent = `Điểm: ${score}`;
+        }
+        
+        function drawGameOver() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+            
+            const isNewHighScore = saveHighScore();
+            if (isNewHighScore) {
+                ctx.font = '24px Arial';
+                ctx.fillText('KỶ LỤC MỚI!', canvas.width / 2, canvas.height / 2 + 30);
+                ctx.font = '20px Arial';
+                ctx.fillText('Nhấn chuột để chơi lại', canvas.width / 2, canvas.height / 2 + 70);
+            } else {
+                ctx.font = '20px Arial';
+                ctx.fillText(`Kỷ lục của bạn: ${highScore}`, canvas.width / 2, canvas.height / 2 + 30);
+                ctx.fillText('Nhấn chuột để chơi lại', canvas.width / 2, canvas.height / 2 + 70);
+            }
+        }
+
+        function updateBird() {
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+
+            if (bird.y + bird.height >= canvas.height - 50) {
+                bird.y = canvas.height - 50 - bird.height;
+                isGameOver = true;
+            }
+        }
+
+        function updatePipes() {
+            if (frames % 90 === 0) {
+                let topPipeHeight = Math.floor(Math.random() * (canvas.height - 50 - pipeProps.gap - 100)) + 50;
+                pipes.push({
+                    x: canvas.width,
+                    y: 0,
+                    top: topPipeHeight,
+                    passed: false
+                });
+            }
+
+            for (let i = 0; i < pipes.length; i++) {
+                let p = pipes[i];
+                p.x -= pipeProps.speed;
+
+                if (
+                    bird.x < p.x + pipeProps.width &&
+                    bird.x + bird.width > p.x &&
+                    (bird.y < p.top || bird.y + bird.height > p.top + pipeProps.gap)
+                ) {
+                    isGameOver = true;
+                }
+                
+                if (p.x + pipeProps.width < bird.x && !p.passed) {
+                    score++;
+                    p.passed = true;
+                }
+
+                if (p.x + pipeProps.width < 0) {
+                    pipes.shift();
+                    i--; 
+                }
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (!isGameOver) {
+                frames++;
+
+                updateBird();
+                updatePipes();
+
+                drawPipes();
+                drawBird();
+                drawGround();
+                drawScore(); // Chỉ cập nhật điểm hiện tại
+                
+                requestAnimationFrame(gameLoop);
+            } else {
+                drawGameOver();
+            }
+        }
+
+        function flap(event) {
+            if (isGameOver) {
+                resetGame();
+            } else {
+                bird.velocity = -bird.jump;
+            }
+        }
+        
+        function resetGame() {
+            isGameOver = false;
+            frames = 0;
+            score = 0;
+            pipes = [];
+            
+            bird.y = 150;
+            bird.velocity = 0;
+            
+            updateHighScoreDisplay(); // Cập nhật hiển thị kỷ lục sau khi reset
+            gameLoop();
+        }
+
+        document.addEventListener('mousedown', flap); 
+        
+        loadHighScore();
+        gameLoop();
+    </script>
+</body>
+</html>
